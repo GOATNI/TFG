@@ -161,7 +161,7 @@ class ApiService {
 
   // RESEÑAS
   static Future<Map<String, dynamic>> getResenas(String idInstalacion) async {
-    final res = await http.get(Uri.parse('$baseUrl/instalacion/reservas'));
+    final res = await http.get(Uri.parse('$baseUrl/instalaciones/resenas'));
     final body = jsonDecode(res.body);
     if (body['success'] == true) return body['data'];
     throw Exception(body['message'] ?? 'Error al cargar reseña');
@@ -172,7 +172,7 @@ class ApiService {
     Map<String, dynamic> datos,
   ) async {
     final res = await http.post(
-      Uri.parse('$baseUrl/instalaciones/$idInstalacion/reservas'),
+      Uri.parse('$baseUrl/instalaciones/$idInstalacion/resenas'),
       headers: {
       'Content-Type': 'application/json',
       'X-Requested-With' : 'XMLHttpRequest'
