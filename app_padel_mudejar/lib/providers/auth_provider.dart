@@ -6,11 +6,14 @@ class AuthProvider extends ChangeNotifier {
   Map<String, dynamic>? _socio;
   bool _isLoading = false;
   String? _error;
+  String _passwordActual = '';
 
   Map<String, dynamic>? get socio => _socio;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isLoggedIn => _socio != null;
+  String get passwordActual => _passwordActual;
+  bool get necesitaCambiarPassword => _passwordActual == dni;
 
   String get dni => _socio?['dniUsuario'] ?? '';
   String get nombre => _socio?['usuario']?['nombre'] ?? '';
@@ -24,35 +27,50 @@ class AuthProvider extends ChangeNotifier {
   Future<void> cargarSesion() async {
     final prefs = await SharedPreferences.getInstance();
     final dniGuardado = prefs.getString('dni_sesion');
-    if (dniGuardado != null) {
+    final passGuardado = prefs.getString('pass_sesion');
+    if (dniGuardado != null && passGuardado != null) {
       try {
-        _socio = await ApiService.getSocio(dniGuardado);
-        notifyListeners();
+        final result = await ApiService.loginSocio(dniGuardado, passGuardado);
+        if (result['success'] == true) {
+          _socio = await ApiService.getSocio(dniGuardado);
+          _passwordActual = passGuardado;
+          notifyListeners();
+        } else {
+          await prefs.remove('dni_sesion');
+          await prefs.remove('pass_sesion');
+        }
       } catch (_) {
         await prefs.remove('dni_sesion');
+        await prefs.remove('pass_sesion');
       }
     }
   }
 
   /// Login por DNI
-  Future<bool> login(String dni) async {
+  Future<bool> login(String dni, String password) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final esSocio = await ApiService.isSocio(dni);
-      if (!esSocio) {
-        _error = 'El DNI no está registrado como socio.';
+      final result = await ApiService.loginSocio(dni, password);
+
+      if (result['success'] != true) {
+        _error =
+            result['message']?.toString() ??
+            result['message']?.toString() ??
+            'DNI o contraseña incorrectos.';
         _isLoading = false;
         notifyListeners();
         return false;
       }
 
       _socio = await ApiService.getSocio(dni);
+      _passwordActual = password;
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('dni_sesion', dni);
+      await prefs.setString('pass_sesion', password);
 
       _isLoading = false;
       notifyListeners();
@@ -75,8 +93,12 @@ class AuthProvider extends ChangeNotifier {
       final result = await ApiService.registrarSocio(datos);
       if (result['success'] == true) {
         _socio = result['data'];
+        final dni = datos['dni'];
+        // La contraseña por defecto es el DNI
+        _passwordActual = dni;
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('dni_sesion', datos['dniUsuario']);
+        await prefs.setString('dni_sesion', dni);
+        await prefs.setString('pass_sesion', dni);
       }
       _isLoading = false;
       notifyListeners();
@@ -86,7 +108,7 @@ class AuthProvider extends ChangeNotifier {
       _error = 'Error: $e';
       _isLoading = false;
       notifyListeners();
-      return {'success': false, 'message': 'Error : $e' };
+      return {'success': false, 'message': 'Error : $e'};
     }
   }
 
@@ -109,6 +131,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('dni_sesion');
+    await prefs.remove('pass_sesion');
     _socio = null;
     notifyListeners();
   }

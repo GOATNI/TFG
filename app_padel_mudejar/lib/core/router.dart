@@ -9,6 +9,8 @@ import '../screens/home/home_screen.dart';
 import '../screens/reservas/reservar_screen.dart';
 import '../screens/reservas/mis_reservas_screen.dart';
 import '../screens/horarios/horarios_screen.dart';
+import '../screens/auth/cambiar_password_screen.dart';
+import '../screens/horarios/detalle_pista_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -22,9 +24,16 @@ GoRouter createRouter(AuthProvider authProvider) {
       final onAuth =
           state.matchedLocation == '/login' ||
           state.matchedLocation == '/registro';
+      final onCambiarPass = state.matchedLocation == '/cambiar-password';
 
       if (!loggedIn && !onAuth) return '/login';
-      if (loggedIn && onAuth) return '/home';
+      if (loggedIn && onAuth) {
+        if (authProvider.necesitaCambiarPassword) return '/cambiar-password';
+        return '/home';
+      }
+      if (loggedIn && !onCambiarPass && authProvider.necesitaCambiarPassword) {
+        return '/cambiar-password';
+      }
       return null;
     },
     refreshListenable: authProvider,
@@ -34,6 +43,10 @@ GoRouter createRouter(AuthProvider authProvider) {
       GoRoute(
         path: '/registro',
         builder: (context, state) => const RegistroScreen(),
+      ),
+      GoRoute(
+        path: '/cambiar-password',
+        builder: (context, state) => const CambiarPasswordScreen(),
       ),
 
       // App principal con barra de navegación
@@ -56,6 +69,12 @@ GoRouter createRouter(AuthProvider authProvider) {
           GoRoute(
             path: '/horarios',
             builder: (context, state) => const HorariosScreen(),
+          ),
+          GoRoute(
+            path: '/horarios/detalle',
+            builder: (context, state) => DetallePistaScreen(
+              instalacion: state.extra as Map<String, dynamic>,
+            ),
           ),
           GoRoute(
             path: '/perfil',

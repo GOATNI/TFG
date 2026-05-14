@@ -80,9 +80,9 @@ class ApiService {
     final res = await http.patch(
       Uri.parse('$baseUrl/reservas/$idReserva/cancelar'),
       headers: {
-      'Content-Type': 'application/json',
-      'X-Requested-With' : 'XMLHttpRequest'
-    },
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
     );
     return jsonDecode(res.body);
   }
@@ -96,10 +96,21 @@ class ApiService {
 
   // SOCIOS
 
-  static Future<bool> isSocio(String dni) async {
-    final res = await http.get(Uri.parse('$baseUrl/socios/$dni/is-socio'));
-    final body = jsonDecode(res.body);
-    return body['isSocio'];
+  static Future<Map<String, dynamic>> loginSocio(
+    String dni,
+    String password,
+  ) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/socios/is-socio'),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: jsonEncode({'usuario': dni, 'passwd': password}),
+    );
+    print('STATUS LOGIN: ${res.statusCode}');
+    print('BODY LOGIN: ${res.body}');
+    return jsonDecode(res.body);
   }
 
   static Future<Map<String, dynamic>> getSocio(String dni) async {
@@ -161,7 +172,11 @@ class ApiService {
 
   // RESEÑAS
   static Future<Map<String, dynamic>> getResenas(String idInstalacion) async {
-    final res = await http.get(Uri.parse('$baseUrl/instalaciones/resenas'));
+    final res = await http.get(
+      Uri.parse('$baseUrl/instalaciones/$idInstalacion/resenas'),
+    );
+    print('RESENAS STATUS: ${res.statusCode}');
+    print('RESENAS BODY: ${res.body}');
     final body = jsonDecode(res.body);
     if (body['success'] == true) return body['data'];
     throw Exception(body['message'] ?? 'Error al cargar reseña');
@@ -174,9 +189,9 @@ class ApiService {
     final res = await http.post(
       Uri.parse('$baseUrl/instalaciones/$idInstalacion/resenas'),
       headers: {
-      'Content-Type': 'application/json',
-      'X-Requested-With' : 'XMLHttpRequest'
-    },
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
       body: jsonEncode(datos),
     );
     return jsonDecode(res.body);
@@ -238,9 +253,9 @@ class ApiService {
     final res = await http.post(
       Uri.parse('$baseUrl/instalaciones'),
       headers: {
-      'Content-Type': 'application/json',
-      'X-Requested-With' : 'XMLHttpRequest'
-    },
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
       body: jsonEncode(datos),
     );
     return jsonDecode(res.body);
@@ -253,9 +268,9 @@ class ApiService {
     final res = await http.put(
       Uri.parse('$baseUrl/instalaciones/$id'),
       headers: {
-      'Content-Type': 'application/json',
-      'X-Requested-With' : 'XMLHttpRequest'
-    },
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
       body: jsonEncode(datos),
     );
     return jsonDecode(res.body);

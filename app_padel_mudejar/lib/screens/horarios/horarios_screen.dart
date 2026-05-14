@@ -1,6 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/api_service.dart';
 import '../../core/theme.dart';
 
@@ -13,256 +14,509 @@ class HorariosScreen extends StatefulWidget {
 
 class _HorariosScreenState extends State<HorariosScreen> {
   List<dynamic> _instalaciones = [];
-  DateTime _fechaSeleccionada = DateTime.now();
-  Map<String, List<Map<String, dynamic>>> _horasPorPista = {};
+  Map<String, Map<String, dynamic>> _resenasPorPista = {};
   bool _loading = true;
-  bool _loadingHoras = false;
 
   @override
   void initState() {
     super.initState();
-    _cargarInstalaciones();
+    _cargar();
   }
 
-  Future<void> _cargarInstalaciones() async {
+  Future<void> _cargar() async {
     try {
-      final inst = await ApiService.getInstalaciones(estado: 'ACTIVA');
+      final inst = await ApiService.getInstalaciones();
+      final Map<String, Map<String, dynamic>> resenas = {};
+      for (final i in inst) {
+        try {
+          final r = await ApiService.getResenas(i['idInstalacion']);
+          print(
+            'ESTADOS: ${inst.map((i) => "${i['nombre']}: ${i['estadoPista']}").toList()}',
+          );
+          resenas[i['idInstalacion']] = r;
+        } catch (_) {}
+      }
       setState(() {
         _instalaciones = inst;
+        _resenasPorPista = resenas;
         _loading = false;
       });
-      _cargarHorasTodas();
     } catch (_) {
       setState(() => _loading = false);
     }
   }
 
-  Future<void> _cargarHorasTodas() async {
-    setState(() => _loadingHoras = true);
-    final fecha = DateFormat('yyyy-MM-dd').format(_fechaSeleccionada);
-    final Map<String, List<Map<String, dynamic>>> resultado = {};
-
-    for (final inst in _instalaciones) {
-      try {
-        final res = await ApiService.getHorasDisponibles(
-          fecha: fecha,
-          instalacion: inst['idInstalacion'],
-          duracion: 60,
-        );
-        resultado[inst['idInstalacion']] =
-            (res['horas'] as List<dynamic>? ?? [])
-                .cast<Map<String, dynamic>>();
-      } catch (_) {
-        resultado[inst['idInstalacion']] = [];
-      }
-    }
-
-    setState(() {
-      _horasPorPista = resultado;
-      _loadingHoras = false;
-    });
+  void _mostrarResenas(
+    BuildContext context,
+    dynamic instalacion,
+    Map<String, dynamic>? resenas,
+  ) {
+    if (resenas == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _ResenasPistaBottomSheet(
+        nombreInstalacion: instalacion['nombre'] ?? '',
+        resenas: resenas,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(title: const Text('Horarios')),
+      appBar: AppBar(title: const Text('Pistas')),
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.primary))
-          : Column(
-              children: [
-                _buildSelectorFecha(),
-                Expanded(
-                  child: _loadingHoras
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                              color: AppTheme.primary))
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _instalaciones.length,
-                          itemBuilder: (context, i) {
-                            final inst = _instalaciones[i];
-                            final horas =
-                                _horasPorPista[inst['idInstalacion']] ?? [];
-                            return _PistaHorariosCard(
-                              instalacion: inst,
-                              horas: horas,
-                            ).animate().fadeIn(
-                                delay: Duration(milliseconds: i * 100));
-                          },
-                        ),
-                ),
-              ],
+              child: CircularProgressIndicator(color: AppTheme.primary),
+            )
+          : RefreshIndicator(
+              onRefresh: _cargar,
+              color: AppTheme.primary,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _instalaciones.length,
+                itemBuilder: (context, i) {
+                  final inst = _instalaciones[i];
+                  final resenas = _resenasPorPista[inst['idInstalacion']];
+                  return _PistaCard(
+                        instalacion: inst,
+                        resenas: resenas,
+                        onTap: () =>
+                            context.push('/horarios/detalle', extra: inst),
+                        onResenasTap: () =>
+                            _mostrarResenas(context, inst, resenas),
+                      )
+                      .animate()
+                      .fadeIn(delay: Duration(milliseconds: i * 80))
+                      .slideY(begin: 0.1, end: 0);
+                },
+              ),
             ),
     );
   }
-
-  Widget _buildSelectorFecha() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: SizedBox(
-        height: 70,
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: 14,
-          itemBuilder: (context, i) {
-            final dia = DateTime.now().add(Duration(days: i));
-            final selected = _isSameDay(dia, _fechaSeleccionada);
-            return GestureDetector(
-              onTap: () {
-                setState(() => _fechaSeleccionada = dia);
-                _cargarHorasTodas();
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 52,
-                margin: const EdgeInsets.only(right: 8),
-                decoration: BoxDecoration(
-                  color: selected
-                      ? AppTheme.primary
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      DateFormat('EEE', 'es')
-                          .format(dia)
-                          .toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: selected
-                            ? Colors.white70
-                            : AppTheme.textMedium,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${dia.day}',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: selected
-                            ? Colors.white
-                            : AppTheme.textDark,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  bool _isSameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
-class _PistaHorariosCard extends StatelessWidget {
+class _PistaCard extends StatelessWidget {
   final dynamic instalacion;
-  final List<Map<String, dynamic>> horas;
+  final Map<String, dynamic>? resenas;
+  final VoidCallback onTap;
+  final VoidCallback onResenasTap;
 
-  const _PistaHorariosCard({
+  const _PistaCard({
     required this.instalacion,
-    required this.horas,
+    required this.resenas,
+    required this.onTap,
+    required this.onResenasTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final disponibles = horas.where((h) => h['disponible'] == true).length;
-    final total = horas.length;
+    final estado = instalacion['estadoPista'] as String? ?? '';
+    final activa = estado == 'ACTIVA';
+    final imagenUrl = instalacion['imagen_url'] as String?;
+    final promedio = resenas?['promedio'] as double?;
+    final total = resenas?['total'] as int? ?? 0;
+
+    return GestureDetector(
+      onTap: activa ? onTap : null,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+              child: Stack(
+                children: [
+                  imagenUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: imagenUrl,
+                          height: 160,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            height: 160,
+                            color: Colors.grey.shade100,
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                color: AppTheme.primary,
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            height: 160,
+                            color: Colors.grey.shade100,
+                            child: const Icon(
+                              Icons.sports_tennis_rounded,
+                              size: 60,
+                              color: AppTheme.textLight,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          height: 160,
+                          color: Colors.grey.shade100,
+                          child: const Center(
+                            child: Icon(
+                              Icons.sports_tennis_rounded,
+                              size: 60,
+                              color: AppTheme.textLight,
+                            ),
+                          ),
+                        ),
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: activa ? AppTheme.primary : AppTheme.danger,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            activa ? 'Disponible' : 'Mantenimiento',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (!activa)
+                    Container(
+                      height: 160,
+                      color: Colors.black.withOpacity(0.4),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          instalacion['nombre'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textDark,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          instalacion['tipo'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.textMedium,
+                          ),
+                        ),
+                        if (instalacion['ubicacion'] != null) ...[
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.location_on_rounded,
+                                size: 12,
+                                color: AppTheme.textLight,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                instalacion['ubicacion'],
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textLight,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        if (promedio != null) ...[
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: onResenasTap,
+                            child: Row(
+                              children: [
+                                ...List.generate(5, (i) {
+                                  return Icon(
+                                    i < promedio.floor()
+                                        ? Icons.star_rounded
+                                        : (i < promedio && promedio % 1 >= 0.5)
+                                        ? Icons.star_half_rounded
+                                        : Icons.star_outline_rounded,
+                                    color: AppTheme.accent,
+                                    size: 16,
+                                  );
+                                }),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '$promedio ($total reseñas)',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.textMedium,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.chevron_right_rounded,
+                                  size: 14,
+                                  color: AppTheme.textLight,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ] else ...[
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Sin reseñas aún',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textLight,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (activa)
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppTheme.primary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ResenasPistaBottomSheet extends StatelessWidget {
+  final String nombreInstalacion;
+  final Map<String, dynamic> resenas;
+
+  const _ResenasPistaBottomSheet({
+    required this.nombreInstalacion,
+    required this.resenas,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final lista = (resenas['resenas'] as List<dynamic>? ?? []);
+    final promedio = resenas['promedio'] as double?;
+    final total = resenas['total'] as int? ?? 0;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.all(24),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.75,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.sports_tennis_rounded,
-                    color: AppTheme.primary, size: 18),
+          // Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  instalacion['nombre'] ?? '',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: AppTheme.textDark,
-                  ),
-                ),
-              ),
-              Text(
-                '$disponibles/$total libres',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: disponibles > 0
-                      ? AppTheme.primary
-                      : AppTheme.danger,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+            ),
           ),
-          if (horas.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: horas.map((h) {
-                final disponible = h['disponible'] as bool;
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: disponible
-                        ? AppTheme.primary.withOpacity(0.1)
-                        : AppTheme.danger.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(8),
+          const SizedBox(height: 20),
+
+          // Título y promedio
+          Text(
+            'Reseñas — $nombreInstalacion',
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textDark,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (promedio != null)
+            Row(
+              children: [
+                Text(
+                  '$promedio',
+                  style: const TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.accent,
                   ),
-                  child: Text(
-                    h['hora'],
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: disponible
-                          ? AppTheme.primary
-                          : AppTheme.danger,
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: List.generate(5, (i) {
+                        return Icon(
+                          i < promedio.floor()
+                              ? Icons.star_rounded
+                              : (i < promedio && promedio % 1 >= 0.5)
+                              ? Icons.star_half_rounded
+                              : Icons.star_outline_rounded,
+                          color: AppTheme.accent,
+                          size: 20,
+                        );
+                      }),
                     ),
+                    Text(
+                      '$total reseñas',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMedium,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+          const Divider(height: 24),
+
+          // Lista de reseñas
+          Expanded(
+            child: ListView.builder(
+              itemCount: lista.length,
+              itemBuilder: (context, i) {
+                final r = lista[i];
+                final puntuacion = r['puntuacion'] as int? ?? 0;
+                final comentario = r['comentario'] as String?;
+                final autor = r['nombreAutor'] as String? ?? 'Anónimo';
+                final fecha = r['created_at'] as String? ?? '';
+                final fechaCorta = fecha.isNotEmpty
+                    ? fecha.substring(0, 10)
+                    : '';
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: AppTheme.primary.withOpacity(0.1),
+                        child: Text(
+                          autor.isNotEmpty ? autor[0].toUpperCase() : 'A',
+                          style: const TextStyle(
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  autor,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: AppTheme.textDark,
+                                  ),
+                                ),
+                                Text(
+                                  fechaCorta,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppTheme.textLight,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: List.generate(5, (j) {
+                                return Icon(
+                                  j < puntuacion
+                                      ? Icons.star_rounded
+                                      : Icons.star_outline_rounded,
+                                  color: AppTheme.accent,
+                                  size: 14,
+                                );
+                              }),
+                            ),
+                            if (comentario != null &&
+                                comentario.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                comentario,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.textMedium,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 );
-              }).toList(),
+              },
             ),
-          ] else
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text(
-                'Sin datos para este día',
-                style:
-                    TextStyle(color: AppTheme.textLight, fontSize: 13),
-              ),
-            ),
+          ),
         ],
       ),
     );

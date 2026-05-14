@@ -15,18 +15,24 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _dniController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _verPassword = false;
 
   @override
   void dispose() {
     _dniController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     final auth = context.read<AuthProvider>();
-    final ok = await auth.login(_dniController.text.trim().toUpperCase());
+    final ok = await auth.login(
+      _dniController.text.trim().toUpperCase(),
+      _passwordController.text.trim(),
+    );
     if (ok && mounted) context.go('/home');
   }
 
@@ -60,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
 
                 Text(
-                  'Accede con tu DNI de socio',
+                  'Accede con tu DNI y contraseña',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ).animate().fadeIn(delay: 300.ms),
 
@@ -80,6 +86,28 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ).animate().fadeIn(delay: 400.ms).slideX(begin: -0.2, end: 0),
 
+                const SizedBox(height: 12),
+
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: !_verPassword,
+                  decoration: InputDecoration(
+                    hintText: 'Contraseña',
+                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppTheme.primary),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _verPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                        color: AppTheme.textLight,
+                      ),
+                      onPressed: () => setState(() => _verPassword = !_verPassword),
+                    ),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Introduce tu contraseña';
+                    return null;
+                  },
+                ).animate().fadeIn(delay: 450.ms).slideX(begin: -0.2, end: 0),
+
                 const SizedBox(height: 16),
 
                 if (auth.error != null)
@@ -91,14 +119,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline,
-                            color: AppTheme.danger, size: 18),
+                        const Icon(Icons.error_outline, color: AppTheme.danger, size: 18),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             auth.error!,
-                            style: const TextStyle(
-                                color: AppTheme.danger, fontSize: 13),
+                            style: const TextStyle(color: AppTheme.danger, fontSize: 13),
                           ),
                         ),
                       ],
@@ -113,10 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                         )
                       : const Text('Entrar'),
                 ).animate().fadeIn(delay: 500.ms),
