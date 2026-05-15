@@ -78,7 +78,8 @@ class _ReservarScreenState extends State<ReservarScreen> {
   Future<void> _confirmarReserva() async {
     if (_instalacionSeleccionada == null ||
         _tarifaSeleccionada == null ||
-        _horaSeleccionada == null) return;
+        _horaSeleccionada == null)
+      return;
 
     setState(() => _guardando = true);
 
@@ -122,8 +123,11 @@ class _ReservarScreenState extends State<ReservarScreen> {
                 color: Color(0xFFE8F8EF),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check_rounded,
-                  color: AppTheme.primary, size: 40),
+              child: const Icon(
+                Icons.check_rounded,
+                color: AppTheme.primary,
+                size: 40,
+              ),
             ),
             const SizedBox(height: 16),
             const Text(
@@ -152,8 +156,10 @@ class _ReservarScreenState extends State<ReservarScreen> {
                 _horas = [];
               });
             },
-            child: const Text('Aceptar',
-                style: TextStyle(color: AppTheme.primary)),
+            child: const Text(
+              'Aceptar',
+              style: TextStyle(color: AppTheme.primary),
+            ),
           ),
         ],
       ),
@@ -181,18 +187,15 @@ class _ReservarScreenState extends State<ReservarScreen> {
       ),
       body: _loadingInstalaciones
           ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.primary))
+              child: CircularProgressIndicator(color: AppTheme.primary),
+            )
           : Column(
               children: [
                 _buildStepIndicator(),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
-                    child: [
-                      _buildPaso0(),
-                      _buildPaso1(),
-                      _buildPaso2(),
-                    ][_paso],
+                    child: [_buildPaso0(), _buildPaso1(), _buildPaso2()][_paso],
                   ),
                 ),
               ],
@@ -232,8 +235,11 @@ class _ReservarScreenState extends State<ReservarScreen> {
                       ),
                       child: Center(
                         child: done
-                            ? const Icon(Icons.check,
-                                color: Colors.white, size: 14)
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 14,
+                              )
                             : Text(
                                 '${i + 1}',
                                 style: TextStyle(
@@ -254,8 +260,7 @@ class _ReservarScreenState extends State<ReservarScreen> {
                         color: active || done
                             ? AppTheme.primary
                             : AppTheme.textLight,
-                        fontWeight:
-                            active ? FontWeight.w600 : FontWeight.w400,
+                        fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                       ),
                     ),
                   ],
@@ -283,24 +288,29 @@ class _ReservarScreenState extends State<ReservarScreen> {
       children: [
         _sectionTitle('Elige una pista'),
         const SizedBox(height: 12),
-        ..._instalaciones.map((inst) => _InstalacionCard(
-              instalacion: inst,
-              selected: _instalacionSeleccionada?['idInstalacion'] ==
-                  inst['idInstalacion'],
-              onTap: () => setState(() => _instalacionSeleccionada = inst),
-            )),
+        ..._instalaciones.map(
+          (inst) => _InstalacionCard(
+            instalacion: inst,
+            selected:
+                _instalacionSeleccionada?['idInstalacion'] ==
+                inst['idInstalacion'],
+            onTap: () => setState(() => _instalacionSeleccionada = inst),
+          ),
+        ),
         const SizedBox(height: 24),
         _sectionTitle('Elige la duración'),
         const SizedBox(height: 12),
-        ..._tarifas.map((tarifa) => _TarifaCard(
-              tarifa: tarifa,
-              selected: _tarifaSeleccionada?['idTarifa'] == tarifa['idTarifa'],
-              onTap: () => setState(() => _tarifaSeleccionada = tarifa),
-            )),
+        ..._tarifas.map(
+          (tarifa) => _TarifaCard(
+            tarifa: tarifa,
+            selected: _tarifaSeleccionada?['idTarifa'] == tarifa['idTarifa'],
+            onTap: () => setState(() => _tarifaSeleccionada = tarifa),
+          ),
+        ),
         const SizedBox(height: 32),
         ElevatedButton(
-          onPressed: (_instalacionSeleccionada != null &&
-                  _tarifaSeleccionada != null)
+          onPressed:
+              (_instalacionSeleccionada != null && _tarifaSeleccionada != null)
               ? () {
                   setState(() => _paso = 1);
                   _cargarHoras();
@@ -327,8 +337,7 @@ class _ReservarScreenState extends State<ReservarScreen> {
             firstDay: DateTime.now(),
             lastDay: DateTime.now().add(const Duration(days: 60)),
             focusedDay: _fechaSeleccionada,
-            selectedDayPredicate: (day) =>
-                isSameDay(day, _fechaSeleccionada),
+            selectedDayPredicate: (day) => isSameDay(day, _fechaSeleccionada),
             onDaySelected: (selected, focused) {
               setState(() => _fechaSeleccionada = selected);
               _cargarHoras();
@@ -355,7 +364,8 @@ class _ReservarScreenState extends State<ReservarScreen> {
         const SizedBox(height: 12),
         if (_loadingHoras)
           const Center(
-              child: CircularProgressIndicator(color: AppTheme.primary))
+            child: CircularProgressIndicator(color: AppTheme.primary),
+          )
         else if (_horas.isEmpty)
           const Center(
             child: Text(
@@ -378,18 +388,18 @@ class _ReservarScreenState extends State<ReservarScreen> {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: !disponible
                         ? Colors.grey.shade100
                         : selected
-                            ? AppTheme.primary
-                            : Colors.white,
+                        ? AppTheme.primary
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: selected
-                          ? AppTheme.primary
-                          : Colors.grey.shade200,
+                      color: selected ? AppTheme.primary : Colors.grey.shade200,
                     ),
                   ),
                   child: Text(
@@ -400,8 +410,8 @@ class _ReservarScreenState extends State<ReservarScreen> {
                       color: !disponible
                           ? AppTheme.textLight
                           : selected
-                              ? Colors.white
-                              : AppTheme.textDark,
+                          ? Colors.white
+                          : AppTheme.textDark,
                     ),
                   ),
                 ),
@@ -410,8 +420,9 @@ class _ReservarScreenState extends State<ReservarScreen> {
           ),
         const SizedBox(height: 32),
         ElevatedButton(
-          onPressed:
-              _horaSeleccionada != null ? () => setState(() => _paso = 2) : null,
+          onPressed: _horaSeleccionada != null
+              ? () => setState(() => _paso = 2)
+              : null,
           child: const Text('Continuar'),
         ),
       ],
@@ -432,23 +443,35 @@ class _ReservarScreenState extends State<ReservarScreen> {
           ),
           child: Column(
             children: [
-              _resumenRow(Icons.sports_tennis_rounded, 'Pista',
-                  _instalacionSeleccionada?['nombre'] ?? ''),
-              const Divider(height: 24),
-              _resumenRow(Icons.timer_rounded, 'Duración',
-                  '${_tarifaSeleccionada?['duracionMinutos']} min'),
+              _resumenRow(
+                Icons.sports_tennis_rounded,
+                'Pista',
+                _instalacionSeleccionada?['nombre'] ?? '',
+              ),
               const Divider(height: 24),
               _resumenRow(
-                  Icons.calendar_today_rounded,
-                  'Fecha',
-                  DateFormat('EEEE d MMMM', 'es')
-                      .format(_fechaSeleccionada)),
+                Icons.timer_rounded,
+                'Duración',
+                '${_tarifaSeleccionada?['duracionMinutos']} min',
+              ),
               const Divider(height: 24),
               _resumenRow(
-                  Icons.access_time_rounded, 'Hora', _horaSeleccionada ?? ''),
+                Icons.calendar_today_rounded,
+                'Fecha',
+                DateFormat('EEEE d MMMM', 'es').format(_fechaSeleccionada),
+              ),
               const Divider(height: 24),
-              _resumenRow(Icons.euro_rounded, 'Precio',
-                  '€${_tarifaSeleccionada?['precio']}'),
+              _resumenRow(
+                Icons.access_time_rounded,
+                'Hora',
+                _horaSeleccionada ?? '',
+              ),
+              const Divider(height: 24),
+              _resumenRow(
+                Icons.euro_rounded,
+                'Precio',
+                '€${_tarifaSeleccionada?['precio']}',
+              ),
             ],
           ),
         ).animate().fadeIn().slideY(begin: 0.1, end: 0),
@@ -460,7 +483,9 @@ class _ReservarScreenState extends State<ReservarScreen> {
                   height: 20,
                   width: 20,
                   child: CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2),
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
                 )
               : const Text('Confirmar reserva'),
         ).animate().fadeIn(delay: 200.ms),
@@ -473,9 +498,10 @@ class _ReservarScreenState extends State<ReservarScreen> {
       children: [
         Icon(icon, color: AppTheme.primary, size: 20),
         const SizedBox(width: 12),
-        Text(label,
-            style:
-                const TextStyle(color: AppTheme.textMedium, fontSize: 14)),
+        Text(
+          label,
+          style: const TextStyle(color: AppTheme.textMedium, fontSize: 14),
+        ),
         const Spacer(),
         Text(
           value,
@@ -521,9 +547,7 @@ class _InstalacionCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: selected
-              ? AppTheme.primary.withOpacity(0.08)
-              : Colors.white,
+          color: selected ? AppTheme.primary.withOpacity(0.08) : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected ? AppTheme.primary : Colors.grey.shade200,
@@ -538,8 +562,11 @@ class _InstalacionCard extends StatelessWidget {
                 color: AppTheme.primary.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.sports_tennis_rounded,
-                  color: AppTheme.primary, size: 22),
+              child: const Icon(
+                Icons.sports_tennis_rounded,
+                color: AppTheme.primary,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -594,9 +621,7 @@ class _TarifaCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: selected
-              ? AppTheme.primary.withOpacity(0.08)
-              : Colors.white,
+          color: selected ? AppTheme.primary.withOpacity(0.08) : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected ? AppTheme.primary : Colors.grey.shade200,
@@ -611,7 +636,9 @@ class _TarifaCard extends StatelessWidget {
               child: Text(
                 '${tarifa['nombre']} — ${tarifa['descripcion'] ?? ''}',
                 style: const TextStyle(
-                    fontWeight: FontWeight.w500, fontSize: 14),
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                ),
               ),
             ),
             Text(
@@ -624,8 +651,11 @@ class _TarifaCard extends StatelessWidget {
             ),
             if (selected) ...[
               const SizedBox(width: 8),
-              const Icon(Icons.check_circle_rounded,
-                  color: AppTheme.primary, size: 20),
+              const Icon(
+                Icons.check_circle_rounded,
+                color: AppTheme.primary,
+                size: 20,
+              ),
             ],
           ],
         ),

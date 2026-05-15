@@ -94,6 +94,21 @@ class ApiService {
     throw Exception(body['message'] ?? 'Reserva no encontrada');
   }
 
+  static Future<Map<String, dynamic>> reagendarReserva(
+    int idReserva,
+    Map<String, dynamic> datos,
+  ) async {
+    final res = await http.patch(
+      Uri.parse('$baseUrl/reservas/$idReserva/mia'),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: jsonEncode(datos),
+    );
+    return jsonDecode(res.body);
+  }
+
   // SOCIOS
 
   static Future<Map<String, dynamic>> loginSocio(
@@ -197,61 +212,12 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
-  // ADMIN - SOCIOS
-
-  static Future<Map<String, dynamic>> getSocios({
-    String? buscar,
-    int porPagina = 15,
-    int pagina = 1,
-  }) async {
-    final params = <String, String>{
-      'por_pagina': porPagina.toString(),
-      'page': pagina.toString(),
-    };
-    if (buscar != null && buscar.isNotEmpty) params['buscar'] = buscar;
-    final uri = Uri.parse('$baseUrl/socios').replace(queryParameters: params);
-    final res = await http.get(uri);
-    final body = jsonDecode(res.body);
-    if (body['success'] == true) return body['data'];
-    throw Exception(body['message'] ?? 'Error al cargar socios');
-  }
-
-  static Future<Map<String, dynamic>> eliminarSocio(String dni) async {
-    final res = await http.delete(Uri.parse('$baseUrl/socios/$dni'));
-    return jsonDecode(res.body);
-  }
-
-  // ADMIN - RESERVAS
-
-  static Future<Map<String, dynamic>> getReservas({
-    String? estado,
-    String? fehcaDesde,
-    String? fechaHasta,
-    int porPagina = 15,
-    int pagina = 1,
-  }) async {
-    final params = <String, String>{
-      'por_pagina': porPagina.toString(),
-      'page': pagina.toString(),
-    };
-    if (estado != null) params['estado'] = estado;
-    if (fehcaDesde != null) params['fecha_desde'] = fehcaDesde;
-    if (fechaHasta != null) params['fecha_hasta'] = fechaHasta;
-
-    final uri = Uri.parse('$baseUrl/reservas').replace(queryParameters: params);
-    final res = await http.get(uri);
-    final body = jsonDecode(res.body);
-    if (body['success'] == true) return body['data'];
-    throw Exception(body['message'] ?? 'Error al cargar reservas');
-  }
-
-  // ADMIN - INSTALACIONES
-
-  static Future<Map<String, dynamic>> crearInstalacion(
+  static Future<Map<String, dynamic>> editarResena(
+    int idResena,
     Map<String, dynamic> datos,
   ) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl/instalaciones'),
+    final res = await http.patch(
+      Uri.parse('$baseUrl/resenas/$idResena/mia'),
       headers: {
         'Content-Type': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
@@ -261,68 +227,18 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
-  static Future<Map<String, dynamic>> actualizarInstalacion(
-    String id,
-    Map<String, dynamic> datos,
+  static Future<Map<String, dynamic>> eliminarResena(
+    int idResena,
+    String dniSocio,
   ) async {
-    final res = await http.put(
-      Uri.parse('$baseUrl/instalaciones/$id'),
+    final res = await http.delete(
+      Uri.parse('$baseUrl/resenas/$idResena/mia'),
       headers: {
         'Content-Type': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
       },
-      body: jsonEncode(datos),
+      body: jsonEncode({'dniSocio': dniSocio}),
     );
     return jsonDecode(res.body);
-  }
-
-  // ADMIN - REPORTES
-
-  static Future<Map<String, dynamic>> getReporteResumen() async {
-    final res = await http.get(Uri.parse('$baseUrl/reportes/resumen'));
-    final body = jsonDecode(res.body);
-    if (body['success'] == true) return body['data'];
-    throw Exception(body['message'] ?? 'Error al cargar resumen');
-  }
-
-  static Future<Map<String, dynamic>> getReporteReservas({
-    String? fechaDesde,
-    String? fechaHasta,
-  }) async {
-    final params = <String, String>{};
-    if (fechaDesde != null) params['fecha_desde'] = fechaDesde;
-    if (fechaHasta != null) params['fecha_hasta'] = fechaHasta;
-
-    final uri = Uri.parse(
-      '$baseUrl/reportes/reservas',
-    ).replace(queryParameters: params.isNotEmpty ? params : null);
-    final res = await http.get(uri);
-    final body = jsonDecode(res.body);
-    if (body['success'] == true) return body['data'];
-    throw Exception(body['message'] ?? 'Error al cargar reporte');
-  }
-
-  static Future<Map<String, dynamic>> getReporteSocios() async {
-    final res = await http.get(Uri.parse('$baseUrl/reportes/socios'));
-    final body = jsonDecode(res.body);
-    if (body['success'] == true) return body['data'];
-    throw Exception(body['message'] ?? 'Error al cargar reporte');
-  }
-
-  static Future<Map<String, dynamic>> getReporteInstalaciones({
-    String? fechaDesde,
-    String? fechaHasta,
-  }) async {
-    final params = <String, String>{};
-    if (fechaDesde != null) params['fecha_desde'] = fechaDesde;
-    if (fechaHasta != null) params['fecha_hasta'] = fechaHasta;
-
-    final uri = Uri.parse(
-      '$baseUrl/reportes/instalaciones',
-    ).replace(queryParameters: params.isNotEmpty ? params : null);
-    final res = await http.get(uri);
-    final body = jsonDecode(res.body);
-    if (body['success'] == true) return body['data'];
-    throw Exception(body['message'] ?? 'Error al cargar reporte instalaciones');
   }
 }
