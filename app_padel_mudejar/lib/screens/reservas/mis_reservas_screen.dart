@@ -99,6 +99,7 @@ class _MisReservasScreenState extends State<MisReservasScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      useSafeArea: true,
       builder: (ctx) => _EditarReservaBottomSheet(
         reserva: reserva,
         dniSocio: auth.dni,
@@ -562,7 +563,7 @@ class _EditarReservaBottomSheetState extends State<_EditarReservaBottomSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
+      height: MediaQuery.of(context).size.height * 0.75,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
